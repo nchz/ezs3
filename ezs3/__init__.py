@@ -39,7 +39,7 @@ class BaseUtil:
 class S3(BaseUtil):
     """S3 wrapper built on top of `boto3`."""
 
-    def __init__(self, bucket_name=None, *args, **kwargs):
+    def __init__(self, bucket_name, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._s3 = boto3.resource("s3", **self._get_credentials())
         self.bucket = self._s3.Bucket(bucket_name)
