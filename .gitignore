@@ -1,0 +1,15 @@
+data/
+*.csv
+*.json
+*.pickle
+*.log
+.env
+
+__pycache__/
+*.py[cod]
+build/
+dist/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
