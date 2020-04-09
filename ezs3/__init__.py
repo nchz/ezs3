@@ -55,9 +55,9 @@ class S3(BaseUtil):
     #         "aws_session_token": os.getenv("AWS_SESSION_TOKEN"),
     #     }
 
-    def find_keys(self, s3_prefix, remove_prefix=False):
+    def find_keys(self, s3_prefix="", remove_prefix=False):
         """Generator that yields keys under `s3_prefix`."""
-        if not s3_prefix.endswith("/"):
+        if s3_prefix and not s3_prefix.endswith("/"):
             s3_prefix += "/"
         for obj in self.bucket.objects.filter(Prefix=s3_prefix):
             s3_key = obj.key
@@ -65,7 +65,7 @@ class S3(BaseUtil):
                 s3_key = s3_key[len(s3_prefix) :]
             yield s3_key
 
-    def list_keys(self, s3_prefix, remove_prefix=False):
+    def list_keys(self, s3_prefix="", remove_prefix=False):
         """List keys under `s3_prefix`."""
         return list(self.find_keys(s3_prefix, remove_prefix))
 
