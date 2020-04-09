@@ -41,19 +41,19 @@ class S3(BaseUtil):
 
     def __init__(self, bucket_name, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._s3 = boto3.resource("s3", **self._get_credentials())
+        self._s3 = boto3.resource("s3")
         self.bucket = self._s3.Bucket(bucket_name)
 
         # method aliases.
         self.rm = self.remove
         self.ls = self.list_keys
 
-    def _get_credentials(self):
-        return {
-            "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
-            "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
-            "aws_session_token": os.getenv("AWS_SESSION_TOKEN"),
-        }
+    # def _get_credentials(self):
+    #     return {
+    #         "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
+    #         "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
+    #         "aws_session_token": os.getenv("AWS_SESSION_TOKEN"),
+    #     }
 
     def find_keys(self, s3_prefix, remove_prefix=False):
         """Generator that yields keys under `s3_prefix`."""
