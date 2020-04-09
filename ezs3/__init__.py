@@ -57,7 +57,8 @@ class S3(BaseUtil):
 
     def find_keys(self, s3_prefix, remove_prefix=False):
         """Generator that yields keys under `s3_prefix`."""
-        s3_prefix = s3_prefix.strip("/") + "/"
+        if not s3_prefix.endswith("/"):
+            s3_prefix += "/"
         for obj in self.bucket.objects.filter(Prefix=s3_prefix):
             s3_key = obj.key
             if remove_prefix:
