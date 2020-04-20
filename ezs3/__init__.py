@@ -1,4 +1,5 @@
 import os
+from configparser import ConfigParser
 from pathlib import Path
 
 import boto3
@@ -8,7 +9,7 @@ import botocore
 class BaseUtil:
     """Utility with methods to handle files and directories."""
 
-    def __init__(self, base_path=Path.home()):
+    def __init__(self, base_path="."):
         """
         When calling methods that manipulate paths, they will be relative to
         `base_path`. You can use absolute paths as well.
@@ -37,23 +38,37 @@ class BaseUtil:
 
 
 class S3(BaseUtil):
-    """S3 wrapper built on top of `boto3`."""
+    DEFAULT_CREDENTIALS_FILE = Path.home().joinpath(".aws/credentials").as_posix()
 
-    def __init__(self, bucket_name, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._s3 = boto3.resource("s3")
+    @classmethod
+    def from_credentials(
+        cls,
+        bucket_name,
+        credentials_file=DEFAULT_CREDENTIALS_FILE,
+        profile="default",
+    ):
+        cfg = ConfigParser()
+        if cfg.read(credentials_file):
+            creds = dict(cfg).get(profile)
+            if creds:
+                creds = {
+                    "aws_access_key_id": creds.get("aws_access_key_id"),
+                    "aws_secret_access_key": creds.get("aws_secret_access_key"),
+                    "aws_session_token": creds.get("aws_session_token"),
+                }
+                return cls(bucket_name, **creds)
+            else:
+                raise ValueError(f"Can't find {profile=} in {credentials_file=}")
+        else:
+            raise ValueError(f"Can't parse {credentials_file=}")
+
+    def __init__(self, bucket_name, **kwargs):
+        self._s3 = boto3.resource("s3", **kwargs)
         self.bucket = self._s3.Bucket(bucket_name)
 
         # method aliases.
         self.rm = self.remove
         self.ls = self.list_keys
-
-    # def _get_credentials(self):
-    #     return {
-    #         "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
-    #         "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
-    #         "aws_session_token": os.getenv("AWS_SESSION_TOKEN"),
-    #     }
 
     def find_keys(self, s3_prefix="", remove_prefix=False):
         """Generator that yields keys under `s3_prefix`."""
