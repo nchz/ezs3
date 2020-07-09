@@ -6,38 +6,7 @@ import boto3
 import botocore
 
 
-class BaseUtil:
-    """Utility with methods to handle files and directories."""
-
-    def __init__(self, base_path="."):
-        """
-        When calling methods that manipulate paths, they will be relative to
-        `base_path`. You can use absolute paths as well.
-        """
-        self.base_path = Path(base_path).resolve()
-        self.base_path.mkdir(parents=True, exist_ok=True)
-
-    def is_dir(self, *paths):
-        """Check if joining the arguments results in a directory name."""
-        last_path = str(paths[-1]) if paths else ""
-        return last_path.endswith("/") or self.base_path.joinpath(*paths).is_dir()
-
-    def get_abspath(self, *paths, create_dirs=False):
-        """Build absolute path joining positional args with `self.base_path`.
-
-        If `create_dirs` then it will create the required directories to ensure
-        read/write operations in the resulting path.
-        """
-        abs_path = self.base_path.joinpath(*paths)
-        if create_dirs:
-            if self.is_dir(*paths):
-                abs_path.mkdir(parents=True, exist_ok=True)
-            else:
-                abs_path.parent.mkdir(parents=True, exist_ok=True)
-        return abs_path
-
-
-class S3(BaseUtil):
+class S3:
     DEFAULT_CREDENTIALS_FILE = Path.home().joinpath(".aws/credentials").as_posix()
 
     @classmethod
@@ -62,13 +31,42 @@ class S3(BaseUtil):
         else:
             raise ValueError(f"Can't parse {credentials_file=}")
 
-    def __init__(self, bucket_name, **kwargs):
+    def __init__(self, bucket_name, base_path=".", **kwargs):
+        """
+        When calling methods that manipulate paths, they will be relative to
+        `base_path`. You can use absolute paths as well.
+        """
         self._s3 = boto3.resource("s3", **kwargs)
         self.bucket = self._s3.Bucket(bucket_name)
+        self.base_path = Path(base_path).resolve()
+        self.base_path.mkdir(parents=True, exist_ok=True)
 
         # method aliases.
         self.rm = self.remove
         self.ls = self.list_keys
+
+    # methods to handle files and dirs.
+
+    def is_dir(self, *paths):
+        """Check if joining the arguments results in a directory name."""
+        last_path = str(paths[-1]) if paths else ""
+        return last_path.endswith("/") or self.base_path.joinpath(*paths).is_dir()
+
+    def get_abspath(self, *paths, create_dirs=False):
+        """Build absolute path joining positional args with `self.base_path`.
+
+        If `create_dirs` then it will create the required directories to ensure
+        read/write operations in the resulting path.
+        """
+        abs_path = self.base_path.joinpath(*paths)
+        if create_dirs:
+            if self.is_dir(*paths):
+                abs_path.mkdir(parents=True, exist_ok=True)
+            else:
+                abs_path.parent.mkdir(parents=True, exist_ok=True)
+        return abs_path
+
+    # methods to handle S3 objects.
 
     def find_keys(self, s3_prefix="", remove_prefix=False):
         """Generator that yields keys under `s3_prefix`."""
