@@ -8,7 +8,7 @@ with open("requirements.txt") as f:
 
 setup(
     name="ezs3",
-    version="0.1.0",
+    version="0.2.0",
     author="nchz",
     url="https://github.com/nchz/ezs3",
     description="S3 wrapper built on top of `boto3`.",

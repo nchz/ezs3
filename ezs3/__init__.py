@@ -4,6 +4,7 @@ from pathlib import Path
 
 import boto3
 import botocore
+from dictdot import dictdot
 
 
 class S3:
@@ -12,7 +13,7 @@ class S3:
     @classmethod
     def from_credentials(
         cls,
-        bucket_name,
+        default_bucket,
         credentials_file=DEFAULT_CREDENTIALS_FILE,
         profile="default",
     ):
@@ -25,25 +26,40 @@ class S3:
                     "aws_secret_access_key": creds.get("aws_secret_access_key"),
                     "aws_session_token": creds.get("aws_session_token"),
                 }
-                return cls(bucket_name, **creds)
+                return cls(default_bucket, **creds)
             else:
                 raise ValueError(f"Can't find {profile=} in {credentials_file=}")
         else:
             raise ValueError(f"Can't parse {credentials_file=}")
 
-    def __init__(self, bucket_name, base_path=".", **kwargs):
+    def __init__(self, default_bucket, base_path=".", **kwargs):
         """
         When calling methods that manipulate paths, they will be relative to
         `base_path`. You can use absolute paths as well.
         """
-        self._s3 = boto3.resource("s3", **kwargs)
-        self.bucket = self._s3.Bucket(bucket_name)
         self.base_path = Path(base_path).resolve()
         self.base_path.mkdir(parents=True, exist_ok=True)
+
+        self._resource = boto3.resource("s3", **kwargs)
+        try:
+            buckets = {b.name: b for b in self._resource.buckets.all()}
+            self.buckets = dictdot(buckets)
+        except botocore.exceptions.ClientError as e:
+            not_allowed = e.response["Error"]["Code"] == "AccessDenied"
+            if default_bucket is None and not_allowed:
+                raise ValueError("Can't list all buckets. Provide a `default_bucket`.")
+            bucket = self._resource.Bucket(default_bucket)
+            self.buckets = dictdot({default_bucket: bucket})
+
+        self.bucket = self.buckets.get(default_bucket)
+        # TODO add checks using head_bucket()
 
         # method aliases.
         self.rm = self.remove
         self.ls = self.list_keys
+
+    def set_default_bucket(self, bucket_name):
+        self.bucket = self.buckets[bucket_name]
 
     # methods to handle files and dirs.
 
